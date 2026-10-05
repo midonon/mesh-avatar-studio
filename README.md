@@ -85,6 +85,8 @@ the masks and prompts for you to hand to an image generator.)
 
 ## More
 
+Use **配信 / OBS** in the editor toolbar to open local streaming controls: a transparent browser-source display, microphone volume driven lip sync, and expression keys 1–5. Run `npm run dev`, keep the controller open in Chrome or Edge, and paste its display URL into OBS Browser Source. Microphone audio is analysed locally and is not played or uploaded; configure your voice input separately in OBS. Keys work while the controller has focus. See the [OBS setup guide (Japanese)](docs/streaming.ja.md). Face tracking and global hotkeys are not included.
+
 - [Agent guide](docs/agent-guide.md): the step-by-step procedure agents follow
 - [Reference](docs/reference.md): projects, building layers by hand, all editor controls, tests
 - [Rig fields](docs/rig-fields.md): what every value in `rig.json` means

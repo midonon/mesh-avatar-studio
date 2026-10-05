@@ -3,9 +3,10 @@ import react from '@vitejs/plugin-react';
 import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { localProjectsPlugin } from './src/server/local-projects';
+import { streamControlPlugin } from './src/server/stream-control';
 export default defineConfig({
   server: { host: '127.0.0.1' },
-  plugins: [react(), localProjectsPlugin(fileURLToPath(new URL('.', import.meta.url))), {
+  plugins: [react(), localProjectsPlugin(fileURLToPath(new URL('.', import.meta.url))), streamControlPlugin(), {
     name: 'sample-rig',
     resolveId(id) {
       if (id === 'virtual:sample-rig') return '\0sample-rig';

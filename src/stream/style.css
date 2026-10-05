@@ -1,0 +1,23 @@
+:root { font-family: system-ui, sans-serif; color: #263347; }
+body.stream-controller { margin: 0; background: #edf2f7; }
+body.stream-overlay { margin: 0; background: transparent !important; overflow: hidden; }
+.stream-overlay #root, .overlay-stage { width: 100vw; height: 100vh; background: transparent; }
+.stream-avatar { display: block; width: 100%; height: 100%; }
+.sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); }
+.stream-layout { max-width: 1180px; margin: auto; padding: 28px; display: grid; grid-template-columns: 1fr 1fr; gap: 24px; }
+.stream-layout header { grid-column: 1 / -1; display: flex; align-items: center; justify-content: space-between; gap: 20px; }
+.stream-layout h1 { margin: 0; font-size: 26px; }.stream-layout h2 { font-size: 17px; margin: 24px 0 10px; }
+.stream-layout p { font-size: 13px; line-height: 1.7; color: #586a80; }.stream-layout a { color: #215dcc; }
+.stream-preview { background: white; border-radius: 18px; overflow: hidden; position: sticky; top: 24px; align-self: start; }
+.stream-preview .stream-avatar { height: min(65vh, 600px); }.stream-preview p { text-align: center; }
+.stream-controls { background: white; padding: 24px; border-radius: 18px; }
+.stream-controls label { display: block; font-size: 14px; margin: 12px 0; }
+.stream-controls select, .stream-controls input:not([type=checkbox]), .stream-controls meter { width: 100%; box-sizing: border-box; margin-top: 8px; }
+.stream-controls select, .stream-controls input[readonly] { padding: 10px; border: 1px solid #cbd5e1; border-radius: 8px; background: #f9fbfe; }
+.stream-controls input[readonly] { font-size: 12px; }
+.stream-controls button { padding: 10px 14px; border: 1px solid #cbd5e1; border-radius: 8px; background: white; cursor: pointer; color: inherit; }
+.stream-controls button:disabled { opacity: .6; cursor: wait; }.stream-controls .primary { background: #215dcc; color: white; border-color: #215dcc; width: 100%; }
+.expression-buttons, .stream-actions { display: flex; flex-wrap: wrap; gap: 8px; }.expression-buttons button[aria-pressed=true] { background: #e7efff; border-color: #215dcc; color: #215dcc; }
+.stream-actions { align-items: center; margin-top: 10px; }.stream-controls .check { display: flex; gap: 8px; align-items: center; }
+.stream-controls [role=alert] { color: #a32036; padding: 12px; background: #fff0f2; border-radius: 8px; }
+@media(max-width: 760px) { .stream-layout { grid-template-columns: 1fr; padding: 16px; }.stream-preview { position: static; }.stream-preview .stream-avatar { height: 360px; }.stream-layout header { align-items: start; } }
