@@ -24,6 +24,21 @@ test('transparent display receives microphone and expression controls across bro
   test.setTimeout(90000);
   const errors: string[] = [];
   page.on('pageerror', error => errors.push(error.message));
+  // Chromium's canned microphone varies in loudness. Supply a fixed silent-to-speakers
+  // sine stream so the test actually crosses the drawn-mouth opening threshold.
+  await page.addInitScript(() => {
+    navigator.mediaDevices.getUserMedia = async () => {
+      const context = new AudioContext(), tone = context.createOscillator(), gain = context.createGain();
+      gain.gain.value = 0.1;
+      const destination = context.createMediaStreamDestination();
+      tone.connect(gain); gain.connect(destination); tone.start(); await context.resume();
+      destination.stream.getTracks().forEach(track => {
+        const stop = track.stop.bind(track);
+        track.stop = () => { stop(); tone.stop(); void context.close(); };
+      });
+      return destination.stream;
+    };
+  });
   await page.goto(`/stream?project=${project}`);
   await expect(page.getByTestId('stream-status')).toHaveText('表示中', { timeout: 60000 });
   const other = await browser.newContext();
