@@ -120,6 +120,8 @@ Stream view options, troubleshooting and privacy details are in the
 
 ## More
 
+Use **Vowel lip sync** in the editor toolbar to open local streaming controls: a transparent browser-source display, microphone lip sync, and expression keys 1–5. Calibrate your five Japanese vowels to enable deterministic formant-based mouth shapes, or keep volume-only lip sync. Run `npm run dev`, keep the controller open in Chrome or Edge, and paste its display URL into OBS Browser Source. Microphone audio is analysed locally and is not played or uploaded; only numerical calibration data is saved in your browser. Configure your voice input separately in OBS. Keys work while the controller has focus. See the [OBS setup guide (Japanese)](docs/streaming.ja.md). For camera tracking, use the separate **Live** controls described above. Global hotkeys are not included.
+
 - [Agent guide](docs/agent-guide.md): the step-by-step procedure agents follow
 - [Reference](docs/reference.md): projects, building layers by hand, all editor controls, tests
 - [Rig fields](docs/rig-fields.md): what every value in `rig.json` means

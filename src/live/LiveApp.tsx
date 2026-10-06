@@ -6,10 +6,13 @@ import { FacePose, type TrackingOptions } from './tracking';
 import { CameraCapture, MicrophoneCapture, type CameraState, type MicState, type BackgroundTracking } from './media';
 import { liveText } from './i18n';
 import { createLiveSender } from './relay';
+import { NaturalMotion } from './natural-motion';
+import { NaturalMotionControls, useNaturalSettings } from './NaturalMotionControls';
 
 export function LiveApp() {
   const { language, setLanguage } = useI18n(), t = liveText[language];
   const [settings, setSettings] = useState(() => viewSettings(location.search));
+  const natural = useNaturalSettings(settings.project);
   const [options, setOptions] = useState<TrackingOptions>({ mirror: true, sensitivity: 1, smoothing: 0.35 });
   const [cameraState, setCameraState] = useState<CameraState>('stopped');
   const [micState, setMicState] = useState<MicState>('micOff');
@@ -22,7 +25,7 @@ export function LiveApp() {
   const canvas = useRef<HTMLCanvasElement>(null), video = useRef<HTMLVideoElement>(null);
   const camera = useRef<CameraCapture | null>(null), microphone = useRef<MicrophoneCapture | null>(null);
   const pose = useRef(new FacePose());
-  const controls = useRef({ options, gain, micState, cameraState }); controls.current = { options, gain, micState, cameraState };
+  const controls = useRef({ options, gain, micState, cameraState, natural: natural.settings }); controls.current = { options, gain, micState, cameraState, natural: natural.settings };
   const refreshDevices = () => { void navigator.mediaDevices?.enumerateDevices().then(setDevices).catch(() => undefined); };
   useEffect(() => {
     const capture = new CameraCapture(video.current!, (result, now) => pose.current.update(result, now), state => { setCameraState(state); if (state !== 'running') setTracking(false); });
@@ -42,6 +45,7 @@ export function LiveApp() {
       setBackgroundStatus(camera.current?.backgroundStatus(document.visibilityState === 'hidden' || !!view?.paintPaused(now), now) ?? null);
     };
     const send = createLiveSender(settings.project);
+    const motion = new NaturalMotion(controls.current.natural);
     setViewState('loading');
     void createAvatarView(canvas.current!, settings, (avatar, now, dt) => {
       const control = controls.current, sampled = pose.current.sample(now, dt, control.options);
@@ -50,8 +54,11 @@ export function LiveApp() {
       avatar.setParameters(sampled.params, sampled.weight);
       const micOn = control.micState === 'micOn';
       avatar.setSpeaking(micOn); avatar.setVoiceLevel(micOn ? microphone.current?.level(control.gain) ?? 0 : 0);
+      avatar.setParameterOverrides(motion.update(now / 1000, control.natural));
     }, (avatar, now) => {
-      if (controls.current.cameraState === 'running' || controls.current.micState === 'micOn') send(avatar.getParameters(), now);
+      // Relay the final pose even when all motion strengths are zero: zero breath must
+      // reach OBS rather than letting its independent idle animation resume.
+      send(avatar.getParameters(), now);
     }).then(value => { if (cancelled) value.destroy(); else { view = value; setViewState('ready'); } }).catch(() => { if (!cancelled) setViewState('projectError'); });
     return () => { cancelled = true; clock.terminate(); view?.destroy(); };
   }, [settings.project, settings.fit]);
@@ -67,6 +74,7 @@ export function LiveApp() {
       <canvas ref={canvas} data-testid="live-avatar" />
     </div><p role="status" className={viewState === 'projectError' ? 'live-error' : ''}>{t[viewState]} · {settings.project}</p></section>
     <aside className="live-controls">
+      <NaturalMotionControls language={language} settings={natural.settings} onChange={natural.setSettings} storageError={natural.storageError} />
       <section><h2>{t.camera}</h2><label>{t.device}<select aria-label={t.camera} value={cameraId} disabled={cameraActive} onChange={event => setCameraId(event.target.value)}><option value="">{t.defaultDevice}</option>{devices.filter(device => device.kind === 'videoinput' && device.deviceId).map((device, i) => <option key={device.deviceId} value={device.deviceId}>{device.label || `${t.camera} ${i + 1}`}</option>)}</select></label>
         <div className="live-buttons"><button className="live-primary" disabled={!cameraActive && viewState !== 'ready'} onClick={() => {
           setCalibrated(false); pose.current.reset();

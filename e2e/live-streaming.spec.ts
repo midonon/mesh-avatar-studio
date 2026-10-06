@@ -67,7 +67,9 @@ test('stream has actual alpha, exact green, no controls and no external requests
 test('relay changes only the matching stream and eases back after updates stop', async ({ context, page }) => {
   const outside = await guardNetwork(context);
   await ready(page, '/stream.html?idle=0');
-  const sender = await context.newPage(); await ready(sender, '/live.html');
+  // A live controller now continuously publishes natural motion. Use the editor
+  // as the isolated manual sender when testing relay expiry and project filtering.
+  const sender = await context.newPage(); await sender.goto('/');
   const send = async (project: string, angleX: number) => sender.evaluate(async ({ project, angleX }) => {
     const path = '/src/live/relay.ts'; const { createLiveSender } = await import(path);
     createLiveSender(project)({ angleX, angleZ: angleX / 2, mouthOpen: 0.8 }, performance.now());
@@ -121,7 +123,8 @@ test('live controls calibrate, mirror, compose mic mouth, localize and relay wit
   await page.getByRole('button', { name: '简体中文', exact: true }).click();
   await expect(page.getByRole('button', { name: '校准', exact: true })).toBeVisible();
   await page.getByRole('button', { name: '停止摄像头', exact: true }).click();
-  await expect(stream.locator('#avatar')).toHaveAttribute('data-live', 'idle', { timeout: 2500 });
+  await expect(page.getByTestId('tracking-status')).toHaveAttribute('data-state', 'stopped');
+  await expect(stream.locator('#avatar')).toHaveAttribute('data-live', 'active');
   expect(errors).toEqual([]); expect(outside).toEqual([]);
 });
 

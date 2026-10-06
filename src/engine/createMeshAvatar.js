@@ -6,6 +6,7 @@ import { createRenderer } from './renderer.js';
 import { createPhysics } from './physics.js';
 import { createSpriteModule } from './sprites.js';
 import { Motion } from './motion.js';
+import { applyParameterOverrides, parseParameterOverrides } from './parameter-overrides';
 import { MOTIONS, IDLE_MOTIONS } from './motions.js';
 
 const EYE_PARTS = ['ball', 'low', 'crease', 'lash'];   // back to front
@@ -140,6 +141,7 @@ export async function createMeshAvatarImpl(canvas, options) {
   motion.onMotion = id => { for (const fn of listeners) fn(id); };
 
   let parameters = {}, parameterWeight = 1, lastParameters = {};
+  let parameterOverrides = {};
   const tmp = [0, 0];
   function updateParameters(dt) {
     const P = { ...motion.update(dt) };
@@ -149,6 +151,7 @@ export async function createMeshAvatarImpl(canvas, options) {
       P.mouthOpen = motion.P.mouthOpen;
       if (!options.preserveMouthForm || parameters.mouthForm === undefined) P.mouthForm = motion.P.mouthForm;
     }
+    applyParameterOverrides(P, parameterOverrides);
     lastParameters = P;
     return P;
   }
@@ -215,6 +218,8 @@ export async function createMeshAvatarImpl(canvas, options) {
   return {
     motions: motionList,
     setParameters(values, weight = 1) { parameters = { ...values }; parameterWeight = Math.min(1, Math.max(0, Number(weight) || 0)); },
+    setParameterOverrides(entries) { parameterOverrides = parseParameterOverrides(entries); },
+    clearParameterOverrides() { parameterOverrides = {}; },
     getParameters() { return { ...lastParameters }; },
     /** 0..1 loudness of the voice being played (e.g. normalised RMS). */
     setVoiceLevel(v) { motion.setVoiceLevel(v); },

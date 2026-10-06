@@ -334,6 +334,7 @@ function Workspace() {
     <header className="toolbar">
       <div className="brand"><h1>{t.product}</h1><p>{t.subtitle}</p></div>
       <nav aria-label={t.tools}>
+        <a href={localProject ? `/stream?project=${encodeURIComponent(localProject.name)}` : '/stream'}>{language === 'ja' ? '母音口パク' : language === 'zh' ? '元音口型' : 'Vowel lip sync'}</a>
         <input ref={fileInput} type="file" accept=".json,application/json" hidden aria-label={t.rigFile}
           onChange={event => { void openFile(event.target.files?.[0]); event.target.value = ''; }} />
         <input ref={folderInput} type="file" multiple hidden aria-label={t.folderFiles} {...{ webkitdirectory: '' }}
