@@ -1,9 +1,10 @@
 import { createContext, useContext, useEffect, useState, type ReactNode } from 'react';
 import { readPreference, savePreference } from './preferences';
 import { workflowEn, workflowJa } from './workflow-i18n';
+import { uiZh, workflowZh, partsZh, fieldsZh } from './i18n-zh';
 export { readPreference, savePreference } from './preferences';
 
-export type Language = 'en' | 'ja';
+export type Language = 'en' | 'ja' | 'zh';
 export const LANGUAGE_KEY = 'mesh-avatar-language';
 export const GUIDE_KEY = 'mesh-avatar-guide-seen';
 
@@ -19,7 +20,7 @@ const en = {
   drawnVariants: 'Drawn eyes/mouths', readOnly: 'Read-only', copyPath: 'Copy path', copyFolderPath: 'Copy folder path', copied: 'Path copied',
   showFinder: 'Show in Finder', showFolder: 'Open folder', unknownPath: 'Browser-picked project · full path unavailable',
   savedTo: 'Saved to', saveError: 'Could not save the project. Your edits are still in the editor; try again.', revealError: 'Could not open the project folder.', copyError: 'Could not copy the path.',
-  help: 'Help', close: 'Close help', language: 'Language', english: 'English', japanese: '日本語', enCode: 'EN', jaCode: 'JA',
+  help: 'Help', close: 'Close help', language: 'Language', english: 'English', japanese: '日本語', chinese: '简体中文', enCode: 'EN', jaCode: 'JA', zhCode: '中文',
   parts: 'Parts', faceSection: 'Face', hairSection: 'Hair & accessories', bodySection: 'Body', advanced: 'Advanced',
   notPresent: 'Not in this rig', show: 'Show overlay', hide: 'Hide overlay', showAll: 'Show all', hideAll: 'Hide all',
   source: 'Source & rig', canvas: 'Rig editor canvas', fit: 'Fit', zoom: 'Zoom', zoomOut: 'Zoom out', zoomIn: 'Zoom in', actualSize: 'Reset to 100%', fitPart: 'Fit selected part', wheelMode: 'Mouse wheel', wheelAuto: 'Zoom', wheelPan: 'Scroll to pan',
@@ -43,7 +44,10 @@ const en = {
   emptyHelp: 'Choose a project from Open project, or browse for its folder.',
   newProjectHelp: 'Starting from a new illustration? Ask your agent to prepare a project using the agent guide.',
   invalidRig: 'Could not open the rig file. Check the JSON and these field paths:',
-  invalidFolder: 'Could not open this folder. Include source.png, rig.json, layers.json and every cut-out image.',
+  invalidFolder: 'Could not open this folder. Check rig.json and layers.json for invalid data.',
+  missingFolderFiles: 'Required files are missing. Include source.png, layers.json and every cut-out image.',
+  unreadableFolder: 'A file or folder could not be read. Check access permissions and whether another app is using it, then try again.',
+  unreadableProject: 'Cannot read this project. Check permissions or whether the file is in use.',
   invalidValue: 'Check the values at these field paths:', point: 'point', node: 'node', strand: 'Strand', eye: 'Eye',
   accessory: 'Accessory', x: 'X', y: 'Y', px: 'px',
 };
@@ -59,7 +63,7 @@ const ja: typeof en = {
   drawnVariants: '目・口の差分画像あり', readOnly: '読み取り専用', copyPath: 'パスをコピー', copyFolderPath: 'フォルダのパスをコピー', copied: 'パスをコピーしました',
   showFinder: 'フォルダを開く', showFolder: 'フォルダを開く', unknownPath: 'ブラウザで選択 · フルパスは取得できません',
   savedTo: '保存しました:', saveError: 'プロジェクトを保存できませんでした。編集内容は画面に残っています。もう一度お試しください。', revealError: 'プロジェクトのフォルダを開けませんでした。', copyError: 'パスをコピーできませんでした。',
-  help: 'ヘルプ', close: 'ヘルプを閉じる', language: '言語', english: '英語', japanese: '日本語', enCode: '英語', jaCode: '日本語',
+  help: 'ヘルプ', close: 'ヘルプを閉じる', language: '言語', english: '英語', japanese: '日本語', chinese: '简体中文', enCode: '英語', jaCode: '日本語', zhCode: '中文',
   parts: 'パーツ', faceSection: '顔', hairSection: '髪・飾り', bodySection: '体', advanced: '詳細設定',
   notPresent: 'この設定にはありません', show: 'ガイドを表示', hide: 'ガイドを非表示', showAll: 'すべて表示', hideAll: 'すべて非表示',
   source: '元画像と動く範囲', canvas: '動く範囲の編集キャンバス', fit: '全体表示', zoom: '表示倍率', zoomOut: '縮小', zoomIn: '拡大', actualSize: '100% に戻す', fitPart: '選択中のパーツに合わせる', wheelMode: 'マウスのホイール', wheelAuto: '拡大・縮小', wheelPan: 'スクロールで移動',
@@ -83,13 +87,18 @@ const ja: typeof en = {
   emptyHelp: '「プロジェクトを開く」の一覧から選ぶか、フォルダを指定してください。',
   newProjectHelp: '新しいイラストでは、エージェントに手順書に沿ってプロジェクトを作るよう依頼してください。',
   invalidRig: '設定ファイルを開けませんでした。JSONの形式と次の項目を確認してください：',
-  invalidFolder: 'フォルダーを開けませんでした。source.png、rig.json、layers.json とすべての切り抜き画像を用意してください。',
+  invalidFolder: 'フォルダを開けませんでした。rig.json と layers.json の内容を確認してください。',
+  missingFolderFiles: '必要なファイルが足りません。source.png、layers.json とすべての切り抜き画像を用意してください。',
+  unreadableFolder: 'ファイルまたはフォルダを読み取れませんでした。アクセス権限や、別のアプリで使用中でないかを確認して、もう一度お試しください。',
+  unreadableProject: 'このプロジェクトは読み取れません。アクセス権限や、ファイルが使用中でないかを確認してください。',
   invalidValue: '次の項目の数値を確認してください：', point: '点', node: '節点', strand: '髪の束', eye: '目',
   accessory: '飾り', x: '横', y: '縦', px: '画素',
 };
-export const dictionaries = { en, ja };
+const zh: typeof en = { ...workflowZh, ...uiZh };
+export const dictionaries = { en, ja, zh };
 export type PartGroup = 'head' | 'eyes' | 'mouth' | 'face' | 'cheeks' | 'strands' | 'buns' | 'accessories' | 'body' | 'hand' | 'mesh' | 'view';
 const partText: Record<Language, Record<PartGroup, [string, string, string]>> = {
+  zh: partsZh,
   en: {
     head: ['Head turn', 'Area that moves when the face turns or tilts.', 'Place the centre in the middle of the face; the circle should cover the whole head including hair.'],
     eyes: ['Eyes', 'Outline of each eye opening; drives blinking and gaze.', 'Trace the opening inside the eyelashes. Add dots where the contour changes direction.'],
@@ -153,17 +162,20 @@ export function fieldTitle(path: string, language: Language) {
       if (key === 'accessories') return t.accessory;
       if (key in parts) return parts[key as PartGroup][0];
     }
-    return fieldText[key]?.[language === 'en' ? 0 : 1] ?? key;
+    return language === 'zh' ? fieldsZh[key] ?? key : fieldText[key]?.[language === 'en' ? 0 : 1] ?? key;
   }).join(' · ');
 }
 const Context = createContext({ language: 'en' as Language, setLanguage: (_: Language) => { void _; } });
 export function I18nProvider({ children }: { children: ReactNode }) {
-  const [language, setLanguage] = useState<Language>(() => readPreference(LANGUAGE_KEY) === 'ja' ? 'ja' : 'en');
-  useEffect(() => { document.documentElement.lang = language; savePreference(LANGUAGE_KEY, language); }, [language]);
+  const [language, setLanguage] = useState<Language>(() => {
+    const saved = readPreference(LANGUAGE_KEY);
+    return saved === 'ja' || saved === 'zh' ? saved : 'en';
+  });
+  useEffect(() => { document.documentElement.lang = language === 'zh' ? 'zh-CN' : language; savePreference(LANGUAGE_KEY, language); }, [language]);
   return <Context.Provider value={{ language, setLanguage }}>{children}</Context.Provider>;
 }
 export function useI18n() {
   const context = useContext(Context);
-  return { ...context, t: dictionaries[context.language], parts: partText[context.language],
+  return { ...context, t: dictionaries[context.language], parts: partText[context.language], locale: { en: 'en-GB', ja: 'ja-JP', zh: 'zh-CN' }[context.language],
     title: (path: string) => fieldTitle(path, context.language) };
 }

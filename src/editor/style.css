@@ -27,6 +27,9 @@ button.primary:hover { color: white; background: #1d4ed8; }
 .brand p { margin: 2px 0 0; color: var(--muted); font-size: 12px; }
 .toolbar nav { display: flex; align-items: center; gap: 8px; }
 .toolbar-divider { height: 24px; width: 1px; background: var(--line); }
+.live-link { display: inline-flex; align-items: center; gap: 6px; padding: 8px 14px; border-radius: 8px; background: var(--accent); color: white; font-weight: 600; text-decoration: none; white-space: nowrap; }
+.live-link:hover { filter: brightness(1.08); }
+.live-link[aria-disabled="true"] { background: var(--line); color: var(--muted); cursor: default; filter: none; }
 .language-toggle { display: flex; border: 1px solid var(--line); border-radius: 8px; padding: 2px; background: var(--surface); }
 .language-toggle button { border: 0; padding: 6px 10px; border-radius: 6px; font-size: 12px; }
 .language-toggle button[aria-pressed="true"] { background: var(--accent-soft); color: var(--accent); font-weight: 600; }
@@ -39,6 +42,7 @@ summary::-webkit-details-marker { display: none; }
 .project-list { max-height: 320px; overflow: auto; border-bottom: 1px solid var(--line); margin-bottom: 6px; }
 .project-list button { margin: 4px 0; background: #f5f7fb; }
 .project-list small { display: block; color: var(--muted); font-size: 11px; margin-top: 4px; overflow-wrap: anywhere; }
+.project-menu button.unreadable-project:disabled { opacity: 1; color: var(--muted); cursor: not-allowed; }
 .badge { display: inline-block; font-size: 10px; color: #395476; background: #edf3ff; border-radius: 4px; padding: 2px 4px; margin-left: 6px; }
 .recent-projects { padding: 8px; border-bottom: 1px solid var(--line); text-align: left; }
 .recent-heading { display: flex; align-items: center; justify-content: space-between; }

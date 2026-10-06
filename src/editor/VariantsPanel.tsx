@@ -25,7 +25,9 @@ export function VariantsPanel({ project, projectPath, assets, rootPath, busy, st
   const [lastAction, setLastAction] = useState<ProjectJob>('variant-requests');
   const input = useRef<HTMLInputElement>(null), current = useRef(0);
   const writable = !!project && !project.readOnly;
-  useEffect(() => { setEyes(false); setMouth(false); setError(null); setLog(''); setAccepted(false); setNotice(''); }, [project?.name, projectPath]);
+  // Loading metadata for the current project must not reset choices made during loading.
+  const identity = project?.relativePath ?? projectPath;
+  useEffect(() => { setEyes(false); setMouth(false); setError(null); setLog(''); setAccepted(false); setNotice(''); }, [identity]);
   useEffect(() => {
     const revision = ++current.current;
     setPresent([]); setRequests([]);

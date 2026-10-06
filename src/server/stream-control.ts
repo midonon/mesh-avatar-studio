@@ -5,6 +5,13 @@ import { initialState, parseStreamState, type StreamState } from '../stream/stat
 export function streamControlMiddleware(now = Date.now) {
   const states = new Map<string, StreamState>();
   return async (req: IncomingMessage, res: ServerResponse, next: () => void) => {
+    // Vite otherwise treats /stream as the clean URL of the upstream stream.html.
+    // Preserve the controller route without changing its browser-visible URL.
+    const path = req.url?.split('?')[0];
+    if ((req.method === 'GET' || req.method === 'HEAD') && (path === '/stream' || path === '/stream/overlay')) {
+      req.url = `/index.html${req.url!.slice(path.length)}`;
+      next(); return;
+    }
     if (!req.url?.startsWith('/__stream/')) { next(); return; }
     const reply = (status: number, value: unknown) => {
       res.writeHead(status, { 'Content-Type': 'application/json', 'Cache-Control': 'no-store', 'X-Content-Type-Options': 'nosniff' });
@@ -16,7 +23,8 @@ export function streamControlMiddleware(now = Date.now) {
     if (!/^[A-Za-z0-9_-][A-Za-z0-9._-]{0,79}$/.test(name)) { reply(400, { error: 'Invalid project' }); return; }
     if (req.method === 'GET') {
       const state = states.get(name) ?? initialState();
-      reply(200, { ...state, voice: now() - state.updatedAt > 1500 ? 0 : state.voice }); return;
+      const stale = now() - state.updatedAt > 1500;
+      reply(200, { ...state, voice: stale ? 0 : state.voice, vowel: stale ? null : state.vowel }); return;
     }
     if (req.method !== 'POST') { reply(405, { error: 'Method not allowed' }); return; }
     if (req.headers['content-type']?.split(';')[0] !== 'application/json') { reply(400, { error: 'Send JSON' }); return; }

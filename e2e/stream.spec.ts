@@ -1,24 +1,11 @@
-import { expect, test, type Page } from '@playwright/test';
-import { createHash } from 'node:crypto';
+import { expect, test } from '@playwright/test';
 import { PNG } from 'pngjs';
 import { samplePresent, sampleSkipReason } from './sample';
-import fixture from '../samples/miko-qipao/rig.json' with { type: 'json' };
+import { mouthPixels } from './stream-pixels';
 
 test.use({ launchOptions: { args: ['--use-fake-device-for-media-stream', '--use-fake-ui-for-media-stream'] } });
 test.beforeEach(() => { test.skip(!samplePresent, sampleSkipReason); });
 const project = 'sample-miko-qipao';
-async function mouthPixels(page: Page) {
-  const pixels = await page.getByTestId('stream-avatar').evaluate((element, rig) => {
-    const canvas = element as HTMLCanvasElement;
-    const scale = Math.min(canvas.width / (rig.image.width * 1.24), canvas.height / (rig.image.height * 1.08));
-    const ox = (canvas.width - rig.image.width * scale) / 2, oy = canvas.height - rig.image.height * scale;
-    const m = rig.mouth.area;
-    const crop = document.createElement('canvas'); crop.width = 100; crop.height = 60;
-    crop.getContext('2d')!.drawImage(canvas, ox + (m.cx - m.rx) * scale, oy + (m.cy - m.ry) * scale, m.rx * 2 * scale, m.ry * 2 * scale, 0, 0, 100, 60);
-    return Array.from(crop.getContext('2d')!.getImageData(0, 0, 100, 60).data);
-  }, fixture);
-  return createHash('sha256').update(Buffer.from(pixels)).digest('hex');
-}
 
 test('transparent display receives microphone and expression controls across browser contexts', async ({ page, browser }) => {
   test.setTimeout(90000);
@@ -52,7 +39,7 @@ test('transparent display receives microphone and expression controls across bro
     const png = PNG.sync.read(Buffer.from(image.split(',')[1], 'base64'));
     expect(png.data[3]).toBe(0);
     expect(png.data.some((value, index) => index % 4 === 3 && value > 0)).toBe(true);
-    await page.getByRole('checkbox').uncheck();
+    await page.getByRole('checkbox', { name: '自然な動き' }).uncheck();
     await expect.poll(async () => (await (await display.request.get(`/__stream/${project}`)).json()).idle).toBe(false);
     await display.waitForTimeout(250);
     const closedMouth = await mouthPixels(display);

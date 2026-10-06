@@ -99,6 +99,19 @@ async function closeCards(page) {
 }
 async function prepare(page, language, scene) {
   const ja = language === 'ja';
+  if (scene === '07-live') {
+    await page.goto(new URL(`/live.html?project=${sampleId}`, server.resolvedUrls.local[0]).href);
+    await expect(page.getByRole('status').first()).toContainText(ja ? 'アバターの準備完了' : 'Avatar ready');
+    // The real URL contains this run's random port; show the usual dev-server address instead.
+    await page.locator('.obs-url').evaluate((input, value) => { input.value = value; }, `http://127.0.0.1:5173/stream.html?project=${sampleId}&bg=transparent&fit=contain&idle=1`);
+    return;
+  }
+  if (scene === '08-stream') {
+    await page.goto(new URL(`/stream.html?project=${sampleId}&bg=green&idle=0`, server.resolvedUrls.local[0]).href);
+    await page.waitForFunction(() => { const canvas = document.querySelector('canvas'); return !!canvas && canvas.width > 0; });
+    await page.waitForTimeout(1500);
+    return;
+  }
   if (scene === '06-new-project') {
     await page.route('**/__studio/projects', route => route.fulfill({ contentType: 'application/json', body: '[]' }));
     for (const path of ['source.png', 'built/base.png']) await page.route(`**/miko-qipao/${path}`, route => route.fulfill({ status: 404, body: '' }));
@@ -155,13 +168,16 @@ async function capture(language, scene) {
       localStorage.setItem('mesh-avatar-agent-recipient', 'codex');
     }, language);
     await prepare(page, language, scene);
-    await page.locator('.open-menu').evaluate(element => { element.open = false; });
-    await expect(page.getByTestId('first-guide')).toHaveCount(0);
-    await expect(page.locator('.save-notice')).toHaveCount(0);
+    const editor = !['07-live', '08-stream'].includes(scene);
+    if (editor) {
+      await page.locator('.open-menu').evaluate(element => { element.open = false; });
+      await expect(page.getByTestId('first-guide')).toHaveCount(0);
+      await expect(page.locator('.save-notice')).toHaveCount(0);
+    }
     await page.mouse.move(1430, 890);
     await page.evaluate(() => new Promise(done => requestAnimationFrame(() => requestAnimationFrame(done))));
     if (errors.length) throw new Error(`Browser error: ${errors.join('; ')}`);
-    const visible = await page.locator('main').innerText();
+    const visible = await page.locator('body').innerText();
     for (const forbidden of [root, homedir(), basename(homedir()), '.readme-tmp-', '2000-01-01', 'Updated:', '更新:', '/path/to/', new Date().toISOString().slice(0, 10)]) {
       if (visible.includes(forbidden)) throw new Error(`Environment-specific text in ${language}/${scene}.`);
     }
@@ -179,7 +195,7 @@ try {
   await server.listen();
   browser = await chromium.launch();
   const images = [];
-  const scenes = ['01-overview', '02-edit-handles', '03-lip-sync', '04-rebuild', '05-variants', '06-new-project'];
+  const scenes = ['01-overview', '02-edit-handles', '03-lip-sync', '04-rebuild', '05-variants', '06-new-project', '07-live', '08-stream'];
   for (const language of ['en', 'ja']) for (const scene of scenes) {
     images.push(await capture(language, scene));
     console.log(`Captured ${language}/${scene}.png`);
@@ -188,7 +204,7 @@ try {
     await mkdir(join(output, language), { recursive: true });
     await writeFile(join(output, language, `${scene}.png`), png);
   }
-  console.log('Saved 12 screenshots to docs/images/{en,ja}/ (1440×900, PNG without metadata).');
+  console.log(`Saved ${images.length} screenshots to docs/images/{en,ja}/ (1440×900, PNG without metadata).`);
 } catch (error) {
   console.error(`screenshots: ${error.message.replaceAll(root, '<repo>/').replaceAll(homedir(), '~')}`);
   process.exitCode = 1;

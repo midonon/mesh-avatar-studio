@@ -9,6 +9,8 @@ const paths = {
   chevron: 'm7 10 5 5 5-5', close: 'm6 6 12 12 M6 18 18 6',
   folder: 'M3 7V4h6l2 3h10v13H3V7Z',
   copy: 'M8 8h13v13H8V8Z M16 8V3H3v13h5',
+  live: 'M3 7h12v10H3V7Z M15 10l6-3v10l-6-3',
+  external: 'M14 4h6v6 M20 4l-9 9 M18 14v6H4V6h6',
 };
 export function Icon({ name }: { name: keyof typeof paths }) {
   return <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7"
