@@ -120,6 +120,64 @@ need a writable project from the development server. The app keeps images local;
 Codex card discloses the image-generation upload before you copy its request; other
 external services are excluded from that request.
 
+## Live and streaming
+
+Two pages served by the development server (`npm run dev`):
+
+- **Live page** (`/live.html?project=<name>`, or **Live** in the editor header): camera and
+  microphone controls, face tracking, calibration and the stream URL.
+- **Stream view** (`/stream.html`): only the avatar, for OBS or other capture software.
+
+### Stream view URL
+
+| Parameter | Values | Default |
+|---|---|---|
+| `project` | A project name from the local list, or `sample-miko-qipao` | the sample |
+| `bg` | `transparent`, `green`, `blue` or a hex colour such as `#336699` | `transparent` |
+| `fit` | `contain` (whole avatar) or `cover` (fill the frame) | `contain` |
+| `idle` | `1` (idle motion, blinking, breathing, hair sway) or `0` | `1` |
+
+Any other `bg` value falls back to transparent. In OBS, add the URL as a **Browser Source**
+(for example 1080 × 1080); the transparent background needs no chroma key. Use green or blue
+for software without transparency support.
+
+### How motion reaches the stream view
+
+- The Live page sends numeric pose values (head angles, eyes, gaze, brows, mouth) over the
+  dev server's WebSocket, at most 60 times per second. The server accepts only well-formed
+  numeric messages and rebroadcasts them; each stream view applies only messages for its own
+  `project`.
+- When updates stop for one second, the stream view eases back to idle motion.
+- Tracking runs in a Web Worker, so it continues while the Live page is hidden: in another
+  tab, minimised, or behind another window. Frames come from `MediaStreamTrackProcessor` where
+  available, otherwise from `requestVideoFrameCallback` or a worker timer. If tracking still
+  stops or slows, the Live page shows a warning; bring its window to the front.
+- Face Landmarker uses the GPU and switches to the CPU once if the GPU fails or stays slow after
+  warm-up.
+- With the microphone on, the voice level drives how far the mouth opens and the camera keeps
+  the mouth shape. Drawn mouth images are used automatically when the project has them.
+
+### Privacy
+
+Camera video and microphone audio are processed in the browser and never leave your machine.
+Only the numeric pose values above travel over the local WebSocket. The MediaPipe runtime and
+model are served locally; no CDN or remote model is requested, and the end-to-end tests fail if
+either page makes a request outside `127.0.0.1`.
+
+`@mediapipe/tasks-vision` is pinned to 0.10.21 because newer releases include code that posts
+usage logs to Google. Read [vendor/mediapipe/README.md](../vendor/mediapipe/README.md) before
+upgrading it.
+
+### Troubleshooting
+
+- **No camera image**: allow camera access when the browser asks. On macOS, also check
+  System Settings → Privacy & Security → Camera for your browser. Chrome is recommended.
+- **Movement is too small or jittery**: raise **Sensitivity**, or raise **Smoothing**.
+  Calibrate again while facing the camera with a relaxed face.
+- **Left and right are swapped**: toggle **Mirror**.
+- **The stream view stays idle**: keep the Live page open and running, and make sure both pages
+  use the same `project`.
+
 ## Verify
 
 ```sh

@@ -108,6 +108,21 @@ class AgentToolsTest(unittest.TestCase):
         Image.new("RGB", (100, 100)).save(wrong)
         self.assertEqual(self.cli("new-project", wrong, name, "--force").returncode, 1)
 
+    def test_full_overlay_draws_json_polygons_and_hair_polylines(self):
+        self.rig['view'] = {'gazeCenter': [50, 30]}
+        self.rig['strands'] = [{'name': 'bang', 'nodes': [[12, 5], [18, 9], [23, 12], [27, 16]]}]
+        (self.project / 'rig.json').write_text(json.dumps(self.rig), encoding='utf-8')
+        for part in (None, 'strands'):
+            output = self.project / ('overlay.png' if part is None else 'overlay-strands.png')
+            args = [self.project, '--out', output]
+            if part is not None:
+                args.extend(['--part', part])
+            result = self.cli('overlay', *args)
+            self.assertEqual(result.returncode, 0, result.stderr)
+            with Image.open(output) as image:
+                self.assertEqual(image.size, (100, 100))
+                self.assertNotEqual(image.getpixel((18, 9)), (210, 190, 175))
+
     def test_variants_cover_only_regions_and_missing_variants_are_clean(self):
         eyes, mouth = edit_masks(self.rig, (100, 100))
         self.assertEqual(int(eyes[0][30, 20]), 1)

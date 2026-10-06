@@ -27,6 +27,9 @@ button.primary:hover { color: white; background: #1d4ed8; }
 .brand p { margin: 2px 0 0; color: var(--muted); font-size: 12px; }
 .toolbar nav { display: flex; align-items: center; gap: 8px; }
 .toolbar-divider { height: 24px; width: 1px; background: var(--line); }
+.live-link { display: inline-flex; align-items: center; gap: 6px; padding: 8px 14px; border-radius: 8px; background: var(--accent); color: white; font-weight: 600; text-decoration: none; white-space: nowrap; }
+.live-link:hover { filter: brightness(1.08); }
+.live-link[aria-disabled="true"] { background: var(--line); color: var(--muted); cursor: default; filter: none; }
 .language-toggle { display: flex; border: 1px solid var(--line); border-radius: 8px; padding: 2px; background: var(--surface); }
 .language-toggle button { border: 0; padding: 6px 10px; border-radius: 6px; font-size: 12px; }
 .language-toggle button[aria-pressed="true"] { background: var(--accent-soft); color: var(--accent); font-weight: 600; }

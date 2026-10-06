@@ -6,12 +6,23 @@ import { dismissGuide, samplePresent, sampleSkipReason } from './sample';
 test('paths stay hidden while copies keep full paths, folder buttons work and recipient changes persist', async ({ page, context }) => {
   test.skip(!samplePresent, sampleSkipReason); await context.grantPermissions(['clipboard-read', 'clipboard-write']);
   await page.goto('/'); await dismissGuide(page);
+  let finishLoading!: () => void;
+  const loading = new Promise<void>(resolve => { finishLoading = resolve; });
+  const layersUrl = '**/__studio/projects/sample-miko-qipao/built/layers.json';
+  await page.route(layersUrl, async route => { await loading; await route.continue(); }, { times: 1 });
+  const opening = page.waitForRequest(layersUrl);
   await page.locator('.open-menu > summary').click(); await page.getByTestId('project-sample-miko-qipao').click();
-  await page.getByTestId('variants-panel').getByRole('checkbox', { name: 'Mouth', exact: true }).check();
-  const card = page.getByTestId('ask-agent-variants');
-  await expect(card.locator('.root-path')).toHaveCount(0);
+  await opening;
+  // Checking Mouth before the project finishes loading must survive the load.
+  const mouth = page.getByTestId('variants-panel').getByRole('checkbox', { name: 'Mouth', exact: true });
+  await mouth.check();
+  finishLoading();
   const location = page.getByTestId('project-location');
   await expect(location.locator('strong')).toHaveText('Sample project');
+  await expect(page.getByTestId('preview-status')).toHaveAttribute('data-state', 'ready');
+  await expect(mouth).toBeChecked();
+  const card = page.getByTestId('ask-agent-variants');
+  await expect(card.locator('.root-path')).toHaveCount(0);
   await expect(location.locator('.project-path')).toHaveCount(0);
   await expect(location).not.toContainText('~/'); await expect(location).not.toContainText('samples/miko-qipao');
   await location.getByRole('button', { name: 'Copy path', exact: true }).click();

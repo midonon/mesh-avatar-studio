@@ -152,6 +152,8 @@ test('the read-only sample still gives a mouth request and keeps its source prot
 });
 test('external sprite updates load automatically while keeping edited outlines, selection, zoom and undo', async ({ page, request }) => {
   test.setTimeout(90000); await page.setViewportSize({ width: 1440, height: 900 }); await open(page); await editEye(page);
+  const mouth = page.getByTestId('variants-panel').getByRole('checkbox', { name: 'Mouth', exact: true });
+  await mouth.check();
   const point = page.getByRole('spinbutton', { name: 'eyes.0.opening.0.0', exact: true });
   const initialScale = Number(await page.getByTestId('editor').getAttribute('data-scale'));
   await page.getByTestId('editor').hover(); await page.mouse.wheel(0, -200);
@@ -167,6 +169,7 @@ test('external sprite updates load automatically while keeping edited outlines, 
   await runTool(resolve('.'), directory, 'build-sprites');
   await expect(page.getByTestId('variants-panel').locator('.variant-count').last()).toHaveText('1 of 4 images', { timeout: 20000 });
   await expect(page.getByRole('status').filter({ hasText: 'Drawn variants loaded.' })).toBeVisible();
+  await expect(mouth).toBeChecked();
   await expect(page.getByTestId('preview-status')).toHaveAttribute('data-state', 'ready'); await page.waitForTimeout(300);
   expect(await pixels(page)).not.toBe(before); await expect(page.locator('.mouth-fallback')).toHaveCount(0);
   await page.screenshot({ path: 'docs/screenshots/ui4-auto-after-en-1440x900.png' });
@@ -181,6 +184,9 @@ test('external sprite updates load automatically while keeping edited outlines, 
   await expect(point).toHaveValue('451'); await expect(page.getByTestId('stale-banner')).toBeVisible();
   await expect(page.getByTestId('editor')).toHaveAttribute('data-focus-group', 'eyes'); await expect(page.getByTestId('zoom-value')).toHaveText(zoomText!);
   await page.getByRole('button', { name: 'Undo', exact: true }).click(); await expect(point).toHaveValue('446');
+  await page.locator('.open-menu > summary').click(); await page.getByTestId('project-sample-miko-qipao').click();
+  await expect(page.getByTestId('project-location').locator('strong')).toHaveText('Sample project');
+  await expect(mouth).not.toBeChecked();
 });
 test('pose and lip tabs keep a large preview at 1440 by 900 in both languages', async ({ page }) => {
   await page.setViewportSize({ width: 1440, height: 900 }); await open(page);

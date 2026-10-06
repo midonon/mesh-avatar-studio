@@ -6,6 +6,7 @@ import { createRenderer } from './renderer.js';
 import { createPhysics } from './physics.js';
 import { createSpriteModule } from './sprites.js';
 import { Motion } from './motion.js';
+import { applyParameterOverrides, parseParameterOverrides } from './parameter-overrides';
 import { MOTIONS, IDLE_MOTIONS } from './motions.js';
 
 const EYE_PARTS = ['ball', 'low', 'crease', 'lash'];   // back to front
@@ -86,7 +87,7 @@ export async function createMeshAvatarImpl(canvas, options) {
   // The source image is cut flat at its top edge (crown and right bun). A negative top margin
   // keeps the top ~88px (7%) above the canvas, which the layout puts at the top of the panel:
   // the cut stays off screen even at the deepest head tilt.
-  const R = new Renderer(canvas, { padTop: options.padTop ?? rig.view.padTop, padSide: options.padSide ?? rig.view.padSide });
+  const R = new Renderer(canvas, { padTop: options.padTop ?? rig.view.padTop, padSide: options.padSide ?? rig.view.padSide, fit: options.fit });
   const rects = { base: [0, 0, IMG.w, IMG.h], ...meta.layers };
 
   // base layer, denser where hair strands bend and the face parts shift
@@ -139,15 +140,23 @@ export async function createMeshAvatarImpl(canvas, options) {
   const listeners = new Set();
   motion.onMotion = id => { for (const fn of listeners) fn(id); };
 
-  let parameters = {};
+  let parameters = {}, parameterWeight = 1, lastParameters = {};
+  let parameterOverrides = {};
   const tmp = [0, 0];
-  function tick(dt) {
-    const P = { ...motion.update(dt), ...parameters };
+  function updateParameters(dt) {
+    const P = { ...motion.update(dt) };
+    for (const [key, value] of Object.entries(parameters)) P[key] = parameterWeight === 1 ? value : (P[key] ?? 0) + (value - (P[key] ?? 0)) * parameterWeight;
     // Speech owns the mouth while active; explicit pose sliders still own all other parameters.
     if (motion.lipOpen !== null) {
       P.mouthOpen = motion.P.mouthOpen;
-      P.mouthForm = motion.P.mouthForm;
+      if (!options.preserveMouthForm || parameters.mouthForm === undefined) P.mouthForm = motion.P.mouthForm;
     }
+    applyParameterOverrides(P, parameterOverrides);
+    lastParameters = P;
+    return P;
+  }
+  function tick(dt) {
+    const P = updateParameters(dt);
     const phys = physics.step(P, dt);
 
     const bp = baseMesh.pos, br = baseMesh.rest;
@@ -208,7 +217,10 @@ export async function createMeshAvatarImpl(canvas, options) {
 
   return {
     motions: motionList,
-    setParameters(values) { parameters = { ...values }; },
+    setParameters(values, weight = 1) { parameters = { ...values }; parameterWeight = Math.min(1, Math.max(0, Number(weight) || 0)); },
+    setParameterOverrides(entries) { parameterOverrides = parseParameterOverrides(entries); },
+    clearParameterOverrides() { parameterOverrides = {}; },
+    getParameters() { return { ...lastParameters }; },
     /** 0..1 loudness of the voice being played (e.g. normalised RMS). */
     setVoiceLevel(v) { motion.setVoiceLevel(v); },
     /** true while TTS audio is playing: idle motions pause and the head nods along. */
@@ -236,6 +248,8 @@ export async function createMeshAvatarImpl(canvas, options) {
       if (sec === 0) tick(0);
       else for (let i = 0; i < Math.round(sec * fps); i++) tick(1 / fps);
     },
+    /** Update motion and lip sync without drawing a hidden preview. */
+    advanceParameters(sec) { if (!destroyed) updateParameters(sec); },
     destroy() {
       if (destroyed) return;
       destroyed = true;

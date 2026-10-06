@@ -94,7 +94,33 @@ the masks and prompts for you to hand to an image generator.)
 
 ![Requesting drawn mouths](docs/images/en/05-variants.png)
 
+## Live and streaming
+
+![The Live page](docs/images/en/07-live.png)
+
+Open your project in the editor and choose **Live**. Start the camera, face forward with
+relaxed eyes and a closed mouth, then choose **Calibrate**. You can adjust mirroring,
+sensitivity and smoothing, or enable microphone lip sync. Camera video and microphone
+audio stay on your machine; only numeric avatar motion values reach the stream view.
+
+Choose a background and **Copy OBS URL**, or **Open stream view in a new tab** to check it first. Keep the Live page open and add the URL as an
+OBS **Browser Source**, for example at **1080 × 1080**. The transparent background works
+directly in OBS. For other capture software, choose green and apply a chroma key.
+Both pages use the local development server (`npm run dev`). The stream view shows idle
+motion when the Live page stops sending updates.
+
+Keep the Live page open in its own window. Open the OBS URL inside OBS or in another
+tab; do not paste it into the tab running Live. If the page reports that tracking has
+stopped or slowed while hidden, bring its window to the front.
+
+![The stream view with a green background](docs/images/en/08-stream.png)
+
+Stream view options, troubleshooting and privacy details are in the
+[reference](docs/reference.md#live-and-streaming).
+
 ## More
+
+Use **Vowel lip sync** in the editor toolbar to open local streaming controls: a transparent browser-source display, microphone lip sync, and expression keys 1–5. Calibrate your five Japanese vowels to enable deterministic formant-based mouth shapes, or keep volume-only lip sync. Run `npm run dev`, keep the controller open in Chrome or Edge, and paste its display URL into OBS Browser Source. Microphone audio is analysed locally and is not played or uploaded; only numerical calibration data is saved in your browser. Configure your voice input separately in OBS. Keys work while the controller has focus. See the [OBS setup guide (Japanese)](docs/streaming.ja.md). For camera tracking, use the separate **Live** controls described above. Global hotkeys are not included.
 
 - [Agent guide](docs/agent-guide.md): the step-by-step procedure agents follow
 - [Reference](docs/reference.md): projects, building layers by hand, all editor controls, tests
@@ -110,3 +136,7 @@ character of AITuber OnAir, © Yuki Shindo (AITuber OnAir), and her images are p
 [samples/miko-qipao/MIKO_ASSET_TERMS.md](samples/miko-qipao/MIKO_ASSET_TERMS.md). They may be used
 and modified as part of your own works, but not redistributed on their own or as an asset
 collection. This project is not an official AITuber OnAir product.
+
+Face tracking uses [MediaPipe](https://github.com/google-ai-edge/mediapipe) (`@mediapipe/tasks-vision`
+and the Face Landmarker model in `vendor/mediapipe/`), © The MediaPipe Authors, licensed under the
+Apache License 2.0; see [vendor/mediapipe/LICENSE](vendor/mediapipe/LICENSE).

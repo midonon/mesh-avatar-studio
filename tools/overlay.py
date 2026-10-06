@@ -141,7 +141,7 @@ def overlay(project, rig_name, part, zoom, output):
         bg = Image.new("RGBA", image.size, (145, 145, 145, 255))
         bg.alpha_composite(image)
         result = bg.convert("RGB")
-        transform = lambda p: p
+        transform = lambda p: tuple(p)
     draw = ImageDraw.Draw(result)
     for group, label, points, closed in shapes:
         mapped = [transform(p) for p in points]
