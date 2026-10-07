@@ -1,0 +1,4 @@
+{
+  "eyes": ["eyes_closed", "eyes_half", "eyes_smile", "eyes_spiral", "eyes_cross"],
+  "mouth": ["mouth_a", "mouth_a_half", "mouth_i", "mouth_o"]
+}

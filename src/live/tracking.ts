@@ -89,3 +89,5 @@ export function rmsLevel(samples: Float32Array, gain: number): number {
 }
 export const parameterRanges = new Map(PARAMS.map(param => [param.id, [param.min, param.max] as const]));
 parameterRanges.set('eyeSmileL', [0, 1]);
+parameterRanges.set('eyeSpiral', [0, 1]);
+parameterRanges.set('eyeCross', [0, 1]);

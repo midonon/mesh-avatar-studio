@@ -6,7 +6,7 @@ import { createRenderer } from './renderer.js';
 import { createPhysics } from './physics.js';
 import { createSpriteModule } from './sprites.js';
 import { Motion } from './motion.js';
-import { applyParameterOverrides, parseParameterOverrides } from './parameter-overrides';
+import { ParameterOverrideController } from './parameter-overrides';
 import { MOTIONS, IDLE_MOTIONS } from './motions.js';
 
 const EYE_PARTS = ['ball', 'low', 'crease', 'lash'];   // back to front
@@ -22,7 +22,7 @@ function loadImage(src) {
   const result = new Promise((res, rej) => {
     const i = new Image();
     i.onload = () => res(i);
-    i.onerror = () => rej(new Error(`failed to load ${src}`));
+    i.onerror = () => rej(new Error(`failed to load ${src.startsWith('data:') ? 'image data' : src}`));
     i.src = src;
   });
   imageCache.set(src, result);
@@ -117,9 +117,15 @@ export async function createMeshAvatarImpl(canvas, options) {
   try {
     {
       const sheet = await loadJson(asset('sprites/sprites.json'));
-      const simgs = Object.fromEntries(await Promise.all(Object.keys(sheet.layers).map(async n =>
-        [n, await loadImage(asset(`sprites/${n}.png`, sheet.build))])));
-      sprites = createSprites(R, sheet, simgs, buildGrid, alphaOf);
+      const simgs = Object.fromEntries((await Promise.all(Object.keys(sheet.layers).map(async n => {
+        try { return [n, await loadImage(asset(`sprites/${n}.png`, sheet.build))]; }
+        catch (error) {
+          if (!/^eyes_(spiral|cross)_[01]$/.test(n)) throw error;
+          console.warn(`Sprite ${n} not loaded:`, error); return null;
+        }
+      }))).filter(Boolean));
+      const ordinary = eyeParts.map(ep => { const n = `eye${ep.eye}_${ep.part}`, img = imgs[n]; return { eye: ep.eye, rect: rects[n], width: img.width, height: img.height, alpha: alphaOf(img) }; });
+      sprites = createSprites(R, sheet, simgs, buildGrid, alphaOf, ordinary);
     }
   } catch (err) {
     console.warn('eye / mouth sprites not loaded:', err);
@@ -141,17 +147,17 @@ export async function createMeshAvatarImpl(canvas, options) {
   motion.onMotion = id => { for (const fn of listeners) fn(id); };
 
   let parameters = {}, parameterWeight = 1, lastParameters = {};
-  let parameterOverrides = {};
+  const parameterOverrides = new ParameterOverrideController();
   const tmp = [0, 0];
   function updateParameters(dt) {
-    const P = { ...motion.update(dt) };
+    const P = { eyeSpiral: 0, eyeCross: 0, ...motion.update(dt) };
     for (const [key, value] of Object.entries(parameters)) P[key] = parameterWeight === 1 ? value : (P[key] ?? 0) + (value - (P[key] ?? 0)) * parameterWeight;
     // Speech owns the mouth while active; explicit pose sliders still own all other parameters.
     if (motion.lipOpen !== null) {
       P.mouthOpen = motion.P.mouthOpen;
       if (!options.preserveMouthForm || parameters.mouthForm === undefined) P.mouthForm = motion.P.mouthForm;
     }
-    applyParameterOverrides(P, parameterOverrides);
+    parameterOverrides.apply(P, options.parameterClock?.() ?? performance.now() / 1000, dt);
     lastParameters = P;
     return P;
   }
@@ -166,9 +172,9 @@ export async function createMeshAvatarImpl(canvas, options) {
     }
     // with drawn eye sprites the layered eye is only ever shown exactly as drawn: moving the
     // cut-out lash leaves seams at its edges
-    const eyeOpenFor = v => (sprites ? 1 : v);
+    const eyeOpenFor = (v, eye) => (sprites?.hasEyeSprites[eye] ? 1 : v);
     for (const ep of eyeParts) {
-      const open = eyeOpenFor(ep.eye === 0 ? P.eyeROpen : P.eyeLOpen);
+      const open = eyeOpenFor(ep.eye === 0 ? P.eyeROpen : P.eyeLOpen, ep.eye);
       const smile = ep.eye === 0 ? P.eyeSmile : (P.eyeSmileL ?? P.eyeSmile);
       ep.layer.alpha = eyePartAlpha(ep.part, open, smile);
       const r = ep.mesh.rest, o = ep.mesh.pos;
@@ -190,8 +196,8 @@ export async function createMeshAvatarImpl(canvas, options) {
     const ball = 7; // px of iris travel
     R.draw({
       eyes: [
-        eyeOpenFor(P.eyeROpen), P.eyeSmile, P.gazeX * ball, -P.gazeY * ball * 0.6,
-        eyeOpenFor(P.eyeLOpen), P.eyeSmileL ?? P.eyeSmile, P.gazeX * ball * 0.85, -P.gazeY * ball * 0.6,
+        eyeOpenFor(P.eyeROpen, 0), P.eyeSmile, P.gazeX * ball, -P.gazeY * ball * 0.6,
+        eyeOpenFor(P.eyeLOpen, 1), P.eyeSmileL ?? P.eyeSmile, P.gazeX * ball * 0.85, -P.gazeY * ball * 0.6,
       ],
       // with sprites the drawn mouths replace the shader-painted one
       mouthOpen: sprites ? 0 : P.mouthOpen, mouthForm: P.mouthForm, cheek: P.blush,
@@ -218,8 +224,9 @@ export async function createMeshAvatarImpl(canvas, options) {
   return {
     motions: motionList,
     setParameters(values, weight = 1) { parameters = { ...values }; parameterWeight = Math.min(1, Math.max(0, Number(weight) || 0)); },
-    setParameterOverrides(entries) { parameterOverrides = parseParameterOverrides(entries); },
-    clearParameterOverrides() { parameterOverrides = {}; },
+    setParameterOverrides(entries) { parameterOverrides.set(entries); },
+    clearParameterOverrides() { parameterOverrides.set(null); },
+    getEyeVariantAvailability() { return sprites?.availability ?? { spiral: { ok: false, reason: 'missing' }, cross: { ok: false, reason: 'missing' } }; },
     getParameters() { return { ...lastParameters }; },
     /** 0..1 loudness of the voice being played (e.g. normalised RMS). */
     setVoiceLevel(v) { motion.setVoiceLevel(v); },

@@ -133,8 +133,10 @@ class AgentToolsTest(unittest.TestCase):
         result = self.cli("variant-requests", self.project)
         self.assertEqual(result.returncode, 0, result.stderr)
         self.assertEqual(
-            len(list((self.project / "variant-requests").glob("*/mask.png"))), 7
+            len(list((self.project / "variant-requests").glob("*/mask.png"))), 9
         )
+        for name, description in [("eyes_spiral", "purple cartoon spirals"), ("eyes_cross", "dark cartoon X")]:
+            self.assertIn(description, (self.project / "variant-requests" / name / "prompt.md").read_text(encoding="utf-8"))
         self.assertEqual(self.cli("build-sprites", self.project).returncode, 0)
         self.assertFalse((self.project / "built").exists())
         self.rig["eyes"][0]["roi"] = []

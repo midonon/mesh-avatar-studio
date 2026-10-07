@@ -1,7 +1,8 @@
 import type { Rig } from '../rig/types';
 import { parseRig } from '../rig/validate';
 import { createMeshAvatarImpl } from './createMeshAvatar.js';
-import type { ParameterOverrides } from './parameter-overrides';
+import type { OverrideInput } from './parameter-overrides';
+import type { EyeVariantAvailability } from './special-eyes';
 
 export interface MeshAvatarOptions {
   rig: Rig;
@@ -12,13 +13,15 @@ export interface MeshAvatarOptions {
   padSide?: number;
   fit?: 'contain' | 'cover';
   preserveMouthForm?: boolean;
+  parameterClock?: () => number;
 }
 export interface MeshAvatar {
   readonly motions: { id: string; label: string; idle: boolean }[];
   setParameters(parameters: Record<string, number>, weight?: number): void;
   /** Applied after tracking and speech, independently of setParameters. */
-  setParameterOverrides(entries: ParameterOverrides): void;
+  setParameterOverrides(entries: OverrideInput): void;
   clearParameterOverrides(): void;
+  getEyeVariantAvailability(): EyeVariantAvailability;
   getParameters(): Record<string, number>;
   setVoiceLevel(value: number): void;
   setSpeaking(on: boolean): void;

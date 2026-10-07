@@ -13,13 +13,15 @@ export async function createAvatarView(canvas: HTMLCanvasElement, settings: View
   const projects = await localProjects(), project = projects?.find(entry => entry.name === settings.project);
   if (project?.error || (!project && settings.project !== SAMPLE_PROJECT)) throw new Error('Project unavailable');
   const loaded = project ? await openLocalProject(project) : { rig: fixture, assets: undefined };
-  const avatar = await createMeshAvatar(canvas, { rig: loaded.rig!, assets: loaded.assets, manual: true, fit: settings.fit, preserveMouthForm: true });
+  let frameTime = performance.now();
+  const avatar = await createMeshAvatar(canvas, { rig: loaded.rig!, assets: loaded.assets, manual: true, fit: settings.fit, preserveMouthForm: true, parameterClock: () => frameTime / 1000 });
   avatar.setAutoIdle(settings.idle); avatar.setAutoMotion(settings.idle);
   if (!settings.idle) avatar.setParameters(neutralParameters);
   canvas.dataset.state = 'ready';
   const timing: FrameTiming = { frames: 0, totalMs: 0, maxMs: 0 };
   let raf = 0, previous = performance.now(), lastPaint = previous;
   const update = (now: number, draw = true) => {
+    frameTime = now;
     const dt = Math.min(0.05, Math.max(0.001, (now - previous) / 1000)); previous = now;
     beforeFrame?.(avatar, now, dt);
     const start = performance.now();

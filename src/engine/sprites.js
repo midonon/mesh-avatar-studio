@@ -76,12 +76,31 @@ export function createSpriteModule(engine, rig) {
    * @param imgs     { name: HTMLImageElement }
    * @param buildGrid, alphaOf  helpers from the renderer / page
    */
-  function createSprites(R, sheet, imgs, buildGrid, alphaOf) {
+  function createSprites(R, sheet, imgs, buildGrid, alphaOf, ordinary = []) {
     const items = {};
+    /** @type {import('./special-eyes').EyeVariantAvailability} */
+    const availability = { spiral: { ok: false, reason: 'missing' }, cross: { ok: false, reason: 'missing' } };
+    for (const variant of ['spiral', 'cross']) {
+      const names = [0, 1].map(i => `eyes_${variant}_${i}`);
+      let reason;
+      if (names.every(n => !sheet.layers[n])) reason = 'missing';
+      else if (names.some(n => !sheet.layers[n])) reason = 'incomplete';
+      else if (names.some(n => !imgs[n])) reason = 'corrupt';
+      else if (names.some((n, i) => {
+        const img = imgs[n], references = [...ordinary.filter(layer => layer.eye === i), ...['closed', 'half', 'smile'].flatMap(style => {
+          const name = `eyes_${style}_${i}`, image = imgs[name];
+          return image ? [{ rect: sheet.layers[name], width: image.width, height: image.height, alpha: alphaOf(image), sprite: true }] : [];
+        })];
+        return !eyeCoverage({ rect: sheet.layers[n], width: img.width, height: img.height, alpha: alphaOf(img) }, references, rig.image);
+      })) reason = 'uncovered';
+      availability[variant] = reason ? { ok: false, reason } : { ok: true };
+    }
     // draw order matters for the cross-fades: half-closed under closed / smiling (the fade-in frame is drawn on top)
-    const order = n => (n.startsWith('eyes_half') ? 0 : n.startsWith('eyes_') ? 1 : 2);
+    const order = n => (n.startsWith('eyes_half') ? 0 : n.startsWith('eyes_spiral') ? 2 : n.startsWith('eyes_cross') ? 3 : n.startsWith('eyes_') ? 1 : 4);
     const entries = Object.entries(sheet.layers).sort((x, y) => order(x[0]) - order(y[0]));
     for (const [name, rect] of entries) {
+      if (!imgs[name]) continue;
+      if (name.startsWith('eyes_spiral') && !availability.spiral.ok || name.startsWith('eyes_cross') && !availability.cross.ok) continue;
       const mesh = buildGrid(rect, rig.mesh.spriteCell, alphaOf(imgs[name]), imgs[name].width);
       const W = [], inner = [];
       for (let k = 0; k < mesh.rest.length / 2; k++) {
@@ -96,6 +115,7 @@ export function createSpriteModule(engine, rig) {
     const tmp = [0, 0];
     let lastShape = null;
     const eyeState = [0, 1].map(() => ({ cur: 'open', prev: 'open', t: 1 }));
+    const warned = new Set();
 
     function place(item, P, phys, squash, width = 1) {
       const r = item.mesh.rest, o = item.mesh.pos;
@@ -114,6 +134,8 @@ export function createSpriteModule(engine, rig) {
     }
 
     return {
+      availability,
+      hasEyeSprites: [0, 1].map(i => ['closed', 'half', 'smile'].every(style => !!items[`eyes_${style}_${i}`])),
       /**
        * Show / hide and deform the sprites for this frame.
        * Returns which eyes are covered by a sprite, so the layered eye parts can be hidden.
@@ -121,6 +143,10 @@ export function createSpriteModule(engine, rig) {
       update(P, phys, dt = 1 / 60) {
         for (const it of Object.values(items)) it.layer.visible = false;
         const covered = [false, false];
+        for (const [variant, weight] of [['spiral', P.eyeSpiral], ['cross', P.eyeCross]]) {
+          if (weight > 0 && !availability[variant].ok && !warned.has(variant)) { warned.add(variant); console.warn(`Special eyes ${variant} unavailable: ${availability[variant].reason}`); }
+        }
+        const special = specialEyeAlphas(availability.spiral.ok ? P.eyeSpiral : 0, availability.cross.ok ? P.eyeCross : 0);
         const eyes = [
           [P.eyeROpen, P.eyeSmile],
           [P.eyeLOpen, P.eyeSmileL ?? P.eyeSmile],
@@ -134,6 +160,7 @@ export function createSpriteModule(engine, rig) {
           st.t = Math.min(1, st.t + dt / EYE_FADE_SEC);
           const k = sstep(0, 1, st.t);
           const show = (name, alpha) => {
+            if (special.coverage >= 0.999) return;
             if (name === 'open' || alpha <= 0.001) return;
             const it = items[`${name}_${i}`];
             if (!it) return;
@@ -149,7 +176,13 @@ export function createSpriteModule(engine, rig) {
           if (st.t >= 1) show(st.cur, 1);
           else if (rank(st.cur) > rank(st.prev)) { show(st.prev, 1); show(st.cur, k); }
           else { show(st.cur, 1); show(st.prev, 1 - k); }
-          covered[i] = st.cur !== 'open' && k >= 0.999;
+          covered[i] = special.coverage >= 0.999 || st.cur !== 'open' && k >= 0.999;
+          for (const variant of ['spiral', 'cross']) {
+            const alpha = special[variant], it = items[`eyes_${variant}_${i}`];
+            if (!it || alpha <= 0.001) continue;
+            it.layer.visible = true; it.layer.alpha = alpha;
+            place(it, P, phys, 1);
+          }
         });
         const shape = mouthShape(P.mouthOpen, P.mouthForm, lastShape);
         lastShape = shape;
@@ -169,3 +202,4 @@ export function createSpriteModule(engine, rig) {
   }
   return { createSprites, mouthShape, eyeSprite };
 }
+import { eyeCoverage, specialEyeAlphas } from './special-eyes';

@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { useI18n } from '../editor/i18n';
 import { createAvatarView } from './avatar-view';
 import { viewSettings, streamUrl, backgroundColor } from './settings';
@@ -8,11 +8,19 @@ import { liveText } from './i18n';
 import { createLiveSender } from './relay';
 import { NaturalMotion } from './natural-motion';
 import { NaturalMotionControls, useNaturalSettings } from './NaturalMotionControls';
+import { ExpressionControls } from './ExpressionControls';
+import { ExpressionComposer, type ExpressionId } from './expressions';
+import type { EyeVariantAvailability } from '../engine/special-eyes';
 
 export function LiveApp() {
   const { language, setLanguage } = useI18n(), t = liveText[language];
   const [settings, setSettings] = useState(() => viewSettings(location.search));
   const natural = useNaturalSettings(settings.project);
+  const [expression, setExpression] = useState<ExpressionId>('neutral');
+  const expressionRef = useRef(expression); expressionRef.current = expression;
+  const previousProject = useRef(settings.project);
+  const [availability, setAvailability] = useState<EyeVariantAvailability>({ spiral: { ok: false, reason: 'missing' }, cross: { ok: false, reason: 'missing' } });
+  const selectExpression = useCallback((id: ExpressionId) => setExpression(current => current === id ? 'neutral' : id), []);
   const [options, setOptions] = useState<TrackingOptions>({ mirror: true, sensitivity: 1, smoothing: 0.35 });
   const [cameraState, setCameraState] = useState<CameraState>('stopped');
   const [micState, setMicState] = useState<MicState>('micOff');
@@ -46,21 +54,34 @@ export function LiveApp() {
     };
     const send = createLiveSender(settings.project);
     const motion = new NaturalMotion(controls.current.natural);
+    const composer = new ExpressionComposer();
+    let installed = false;
+    if (previousProject.current !== settings.project) {
+      previousProject.current = settings.project;
+      expressionRef.current = 'neutral'; setExpression('neutral');
+    }
     setViewState('loading');
     void createAvatarView(canvas.current!, settings, (avatar, now, dt) => {
       const control = controls.current, sampled = pose.current.sample(now, dt, control.options);
       setTracking(sampled.tracking);
-      avatar.setAutoIdle(!sampled.tracking); avatar.setAutoMotion(!sampled.tracking);
+      avatar.setAutoIdle(false); avatar.setAutoMotion(false);
       avatar.setParameters(sampled.params, sampled.weight);
       const micOn = control.micState === 'micOn';
       avatar.setSpeaking(micOn); avatar.setVoiceLevel(micOn ? microphone.current?.level(control.gain) ?? 0 : 0);
-      avatar.setParameterOverrides(motion.update(now / 1000, control.natural));
+      if (!installed) {
+        avatar.setParameterOverrides(ctx => composer.compose(ctx.baseline, motion.sample(ctx.time, controls.current.natural), expressionRef.current, ctx.time));
+        const available = avatar.getEyeVariantAvailability();
+        setAvailability(available);
+        const selected = expressionRef.current;
+        if ((selected === 'spiral' || selected === 'cross') && !available[selected].ok) { expressionRef.current = 'neutral'; setExpression('neutral'); }
+        installed = true;
+      }
     }, (avatar, now) => {
       // Relay the final pose even when all motion strengths are zero: zero breath must
       // reach OBS rather than letting its independent idle animation resume.
       send(avatar.getParameters(), now);
     }).then(value => { if (cancelled) value.destroy(); else { view = value; setViewState('ready'); } }).catch(() => { if (!cancelled) setViewState('projectError'); });
-    return () => { cancelled = true; clock.terminate(); view?.destroy(); };
+    return () => { cancelled = true; clock.terminate(); view?.avatar.setParameterOverrides(null); view?.destroy(); };
   }, [settings.project, settings.fit]);
   const cameraActive = cameraState === 'starting' || cameraState === 'running';
   const micActive = micState === 'micStarting' || micState === 'micOn';
@@ -74,6 +95,7 @@ export function LiveApp() {
       <canvas ref={canvas} data-testid="live-avatar" />
     </div><p role="status" className={viewState === 'projectError' ? 'live-error' : ''}>{t[viewState]} · {settings.project}</p></section>
     <aside className="live-controls">
+      <ExpressionControls key={settings.project} project={settings.project} language={language} active={expression} onSelect={selectExpression} availability={availability} />
       <NaturalMotionControls language={language} settings={natural.settings} onChange={natural.setSettings} storageError={natural.storageError} />
       <section><h2>{t.camera}</h2><label>{t.device}<select aria-label={t.camera} value={cameraId} disabled={cameraActive} onChange={event => setCameraId(event.target.value)}><option value="">{t.defaultDevice}</option>{devices.filter(device => device.kind === 'videoinput' && device.deviceId).map((device, i) => <option key={device.deviceId} value={device.deviceId}>{device.label || `${t.camera} ${i + 1}`}</option>)}</select></label>
         <div className="live-buttons"><button className="live-primary" disabled={!cameraActive && viewState !== 'ready'} onClick={() => {
@@ -96,7 +118,7 @@ export function LiveApp() {
       <section><h2>{t.background}</h2><select aria-label={t.background} value={settings.background} onChange={event => setSettings(current => ({ ...current, background: backgroundColor(event.target.value) }))}>
         <option value="transparent">{t.transparent}</option><option value="#00ff00">{t.green}</option><option value="#0000ff">{t.blue}</option>{!['transparent', '#00ff00', '#0000ff'].includes(settings.background) && <option value={settings.background}>{t.custom}</option>}
       </select><label>{t.custom}<input type="color" value={settings.background === 'transparent' ? '#ffffff' : settings.background} onChange={event => setSettings(current => ({ ...current, background: event.target.value }))} /></label>
-        <label>{t.fit}<select value={settings.fit} onChange={event => setSettings(current => ({ ...current, fit: event.target.value as 'contain' | 'cover' }))}><option value="contain">{t.contain}</option><option value="cover">{t.cover}</option></select></label>
+        <label>{t.fit}<select aria-label={t.fit} value={settings.fit} onChange={event => setSettings(current => ({ ...current, fit: event.target.value as 'contain' | 'cover' }))}><option value="contain">{t.contain}</option><option value="cover">{t.cover}</option></select></label>
         <div className="live-buttons"><button className="live-primary" onClick={() => { void navigator.clipboard.writeText(url).then(() => setCopyState('copied')).catch(() => setCopyState('copyError')); }}>{t.obs}</button>
         <a className="live-open" href={url} target="_blank" rel="noreferrer">{t.openStream}</a></div>
         {copyState && <p role="status">{t[copyState]}</p>}<input className="obs-url" aria-label={t.obs} readOnly value={url} onFocus={event => event.target.select()} /><small>{t.obsHelp}</small>

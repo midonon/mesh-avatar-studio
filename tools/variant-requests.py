@@ -23,6 +23,8 @@ CHANGES = {
     "eyes_closed": "Close both eyes naturally, using one clean upper lash line per eye. Remove all visible iris and eye white. Keep the eyebrows unchanged.",
     "eyes_half": "Draw both eyes half closed, with the upper lids halfway down. Keep the iris visible only below the upper lid and preserve the original gaze.",
     "eyes_smile": "Draw both eyes closed in a gentle smiling upward arc, with clean lashes and no visible iris or eye white. Keep the eyebrows unchanged.",
+    "eyes_spiral": "Replace only both eyes with purple cartoon spirals on opaque matching skin patches. Completely cover the original eyes and lashes. Keep brows, mouth and pose unchanged. Do not add sweat, stress marks or swirls outside the eyes.",
+    "eyes_cross": "Replace only both eyes with bold dark cartoon X strokes on opaque matching skin patches. Completely cover the original eyes and lashes. Keep brows, mouth and pose unchanged. Do not add sweat or stress marks.",
     "mouth_a": "Open the mouth in the Japanese vowel あ (a): a natural vertically open mouth, with a subtle tongue and upper teeth.",
     "mouth_a_half": "Draw the Japanese vowel あ (a) at half openness: a smaller, gently open mouth.",
     "mouth_i": "Draw the Japanese vowel い (i): a wide, narrow open smile with subtle upper teeth.",

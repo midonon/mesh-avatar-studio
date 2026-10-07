@@ -28,7 +28,7 @@ export class LivePose {
   receive(input: unknown, now: number) {
     const message = liveMessage(input);
     if (!message || message.project !== this.project) return false;
-    this.params = message.params; this.received = now; return true;
+    this.params = { eyeSpiral: 0, eyeCross: 0, ...message.params }; this.received = now; return true;
   }
   sample(now: number, dt: number) {
     // Sender timestamps come from another browser clock. Use local receipt time.

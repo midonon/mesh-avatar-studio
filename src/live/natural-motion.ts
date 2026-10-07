@@ -5,6 +5,7 @@ const approach = (value: number, target: number, step: number) => value + Math.m
 const smooth = (value: number) => value * value * (3 - 2 * value);
 /** Seconds and injected randomness keep motion independent of render scheduling. */
 export class NaturalMotion {
+  private blinkOpen = 1;
   private previous: number | undefined;
   private nextBlink = 0;
   private blinkStart: number | undefined;
@@ -63,6 +64,11 @@ export class NaturalMotion {
       output.bodyAngleX = { mode: 'add', value: 2 * this.swayStrength * (0.6 * waves[0] + 0.4 * waves[1]) };
       output.bodyAngleZ = { mode: 'add', value: 1.5 * this.swayStrength * (0.6 * waves[2] + 0.4 * waves[3]) };
     }
+    this.blinkOpen = open;
     return output;
+  }
+  sample(now: number, settings: NaturalSettings) {
+    const map = this.update(now, settings);
+    return { map, blinkOpen: this.blinkOpen, autoEyeWeight: this.eyeWeight };
   }
 }

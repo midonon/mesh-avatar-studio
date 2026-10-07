@@ -108,8 +108,9 @@ def grid_image(image, region=None, step=50):
     return result, lambda p: (left + (p[0] - x0) * scale, top + (p[1] - y0) * scale)
 
 
-EYE_VARIANTS = ("eyes_closed", "eyes_half", "eyes_smile")
-MOUTH_VARIANTS = ("mouth_a", "mouth_a_half", "mouth_i", "mouth_o")
+_variants = json.loads((ROOT / "src/variants.json").read_text(encoding="utf-8"))
+EYE_VARIANTS = tuple(_variants["eyes"])
+MOUTH_VARIANTS = tuple(_variants["mouth"])
 
 
 def edit_masks(rig, size):

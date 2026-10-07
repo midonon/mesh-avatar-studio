@@ -1,8 +1,8 @@
 # Manual Expression Control for the Live Controller: Specification (revision 3, final)
 
-Status: design only. This revision supersedes revision 2. It adds the user's confirmed input scope and two cartoon eye variants. Nothing has been implemented or run. The implementer must check parameter names and ranges against the engine, and tests must assert them.
+Status: this revision records the Opus design. A local implementation and verification now exist; see [implementation notes](manual-expressions.ja.md). The remaining sections describe the original design and its test plan, rather than claiming every checklist item was individually run.
 
-**Primary-agent review:** Claude Code Opus authored this design. The primary agent checked it against the existing APIs and added the following binding clarifications. This remains future work, with no implementation claims.
+**Primary-agent review:** Claude Code Opus authored this design. The primary agent checked it against the existing APIs and added the following binding clarifications, which informed the implementation.
 
 - Preserve the existing one `setParameters(sampled.params, sampled.weight)` tracking call before each engine update. The provider adds no further full-pose calls. Install it once per avatar lifetime and evaluate it once per shared parameter update.
 - The current NaturalMotion map contains override entries (`mode`, `value`, `weight`), not numeric values. Resolve those entries against a copy of this frame's baseline exactly once to obtain a numeric natural pose `u`. Emit validated `replace` entries for the affected final keys; do not add the same body offset again. Unowned keys remain untouched.
@@ -25,7 +25,7 @@ A streamer using `/live.html` (OBS view `/stream.html`) chooses the avatar's fac
 - **Persistence.** Bindings are saved per project. The active preset is not saved.
 - **Unchanged parts.** Legacy `/stream`, the editor's static-map override path and vowel DSP are unchanged. Samples and reference assets are unchanged.
 
-## 2. Current gaps
+## 2. Gaps identified before implementation
 
 1. `getParameters()` returns the last final pose. There is no read of this frame's baseline after tracking and speech and before overrides.
 2. `setParameterOverrides(map)` takes only a static replacement map. A second call erases the first.
@@ -326,7 +326,7 @@ OS-global hotkeys would need a separate user-installed local input source. Such 
 8. Local asset creation, import and rebuild, kept in ignored folders.
 9. Tests and visual review.
 
-## 15. Tests (none run)
+## 15. Planned tests (actual results are in the implementation notes)
 
 **Engine seam:**
 

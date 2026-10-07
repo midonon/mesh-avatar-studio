@@ -34,4 +34,10 @@ input[type="color"] { width: 100%; height: 32px; border: 0; padding: 0; }
 .obs-url { font-size: 11px; margin: 10px 0; }
 .live-privacy { color: #546a87; font-size: 12px; margin: 0 4px; }
 .live-error { color: #aa2020; }
+.expression-list { display: grid; gap: 8px; }
+.expression-row { display: grid; grid-template-columns: minmax(90px, 1fr) 42px auto 30px; align-items: center; gap: 5px; }
+.expression-row > button { padding: 7px 5px; }
+.expression-row > button[aria-pressed="true"] { background: #2d67b2; color: white; }
+.expression-row kbd { text-align: center; font-size: 11px; overflow-wrap: anywhere; }
+.expression-row small { grid-column: 1 / -1; }
 @media (max-width: 800px) { .live-app { padding: 12px; } .live-layout { grid-template-columns: 1fr; } .live-view { position: static; } .live-preview { height: 55dvh; } .live-header { flex-wrap: wrap; } }

@@ -5,7 +5,7 @@ import { AskAgent } from './AskAgent';
 import { JobFeedback } from './JobFeedback';
 import { CopyButton } from './CopyButton';
 
-const labels = ['eyesClosed', 'eyesHalf', 'eyesSmile', 'mouthA', 'mouthAHalf', 'mouthI', 'mouthO'] as const;
+const labels = ['eyesClosed', 'eyesHalf', 'eyesSmile', 'eyesSpiral', 'eyesCross', 'mouthA', 'mouthAHalf', 'mouthI', 'mouthO'] as const;
 export function VariantsPanel({ project, projectPath, assets, rootPath, busy, stale, onRun, mouthRequest, onMouthPresence }: {
   project: LocalProject | null; projectPath?: string; assets?: Record<string, string>; rootPath?: string; busy: boolean; stale: boolean;
   onRun: (action: ProjectJob, files?: File[]) => Promise<JobResult>; mouthRequest: number; onMouthPresence: (present: boolean) => void;
@@ -50,7 +50,7 @@ export function VariantsPanel({ project, projectPath, assets, rootPath, busy, st
     } catch (error) { setError(error instanceof ProjectJobError ? error : new ProjectJobError('toolFailed')); }
   };
   const count = (prefix: string, total: number) => {
-    const value = present.filter(name => name.startsWith(prefix)).length;
+    const value = present.filter(name => name.startsWith(prefix) && !['eyes_spiral', 'eyes_cross'].includes(name)).length;
     return value ? t.variantCount.replace('COUNT', String(value)).replace('TOTAL', String(total)) : t.variantMissing;
   };
   return <details ref={panel} className="panel variants-panel" data-testid="variants-panel" open>
@@ -60,6 +60,7 @@ export function VariantsPanel({ project, projectPath, assets, rootPath, busy, st
         <label><input type="checkbox" checked={eyes} onChange={event => setEyes(event.target.checked)} aria-label={t.targetEyes} /><span>{t.targetEyes}<small>{t.eyesKinds}</small></span><span className="variant-count">{count('eyes_', 3)}</span></label>
         <label><input ref={mouthCheckbox} type="checkbox" checked={mouth} onChange={event => setMouth(event.target.checked)} aria-label={t.targetMouth} /><span>{t.targetMouth}<small>{t.mouthKinds}</small></span><span className="variant-count">{count('mouth_', 4)}</span></label>
       </div>
+      <p className="workflow-note">{t.optionalCartoonEyes}: {present.filter(name => ['eyes_spiral', 'eyes_cross'].includes(name)).map(name => t[name === 'eyes_spiral' ? 'eyesSpiral' : 'eyesCross']).join(' · ') || t.variantMissing}</p>
       {(eyes || mouth) && projectPath && (projectPath.startsWith('<') ? <p className="workflow-note">{t.agentUnknownPath}</p> : <AskAgent rootPath={rootPath} projectPath={project?.readOnly || projectPath === 'samples/miko-qipao' ? 'projects/miko-qipao-variants' : projectPath} readOnlySource={project?.readOnly || projectPath === 'samples/miko-qipao' ? projectPath : undefined} target={target} />)}
       <details className="manual-variants"><summary>{t.manualVariants}</summary>
         <p>{t.manualHelp}</p>
